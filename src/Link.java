@@ -14,6 +14,16 @@ public class Link {
         }
     }
 
+    public Node getFollowingNode(Node node){
+        if(node1 == node)
+            return node2;
+
+        if(node2 == node)
+            return node1;
+
+        return null;
+    }
+
     public int getWeight() {
         return weight;
     }
