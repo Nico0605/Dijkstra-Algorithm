@@ -60,8 +60,7 @@ public class Node{
             path.add(position);
             position = selectedNode;
         }
-
-        //creo stringa return
+        
         for(int i = path.size() - 1; i > 0; i--){
             pathString += path.get(i).name + "  ";
 
