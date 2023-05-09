@@ -1,130 +1,108 @@
-import java.util.Vector;
+import java.util.*;
 
-public class Node{
-    private static Vector<Node> nodes = new Vector<>();
-    private Vector<Link> links;
-    private String name;
+public class Node implements Comparable<Node> {
+    private String label;
+    private int weight = Integer.MAX_VALUE;
+    private TreeMap<Node, Integer> links;
+    private Node prev = null;
+    private boolean visited = false;
 
-    //all node set to 0 (0 represent an ipotecala infinity -> without the point of start this is set to 0)
-    private Integer weightNode;
-
-    Node(String name){
-        this.name = name;
-        nodes.add(this);//add to vector nodes a new node
-        links = new Vector<>();//initialize vector links for than create in the future a Link between 2 nodes
+    public Node(String label) {
+        this.label = label;
+        links = new TreeMap<>((a, b) -> a.label.compareTo(b.label));
     }
 
-    public Vector<Link> getLinks() {
+    public void link(Node node2, int weight) {
+        links.put(node2, weight);
+        node2.links.put(this, weight);
+    }
+
+    public int weightTo(Node node) {
+        return weight + links.get(node);
+    }
+
+    public String getPath() {
+        String weight = "";
+        if (this.weight < Integer.MAX_VALUE)
+            weight += this.weight;
+        else
+            weight = "inf";
+        String out = "(" + label + "-" + weight + ")";
+        if (prev != null)
+            out = prev.getPath() + "-" + prev.links.get(this) + "->" + out;
+        return out;
+    }
+
+    public boolean isVisited() {
+        return visited;
+    }
+
+    public void setVisited(boolean visited) {
+        this.visited = visited;
+    }
+
+    public String getLabel() {
+        return label;
+    }
+
+    public int getWeight() {
+        return weight;
+    }
+
+    public void setWeight(int weight) {
+        this.weight = weight;
+    }
+
+    public Node getPrev() {
+        return prev;
+    }
+
+    public void setPrev(Node prev) {
+        this.prev = prev;
+    }
+
+    public TreeMap<Node, Integer> getLinks() {
         return links;
     }
 
-    public void setLinks(Vector<Link> links) {
-        this.links = links;
+    public int compareTo(Node other) {
+        return Integer.compare(weight, other.weight);
     }
 
-    private void setWeightNodes(){
-        for (Node n: nodes) {
-            n.weightNode = null;
-        }
-    }
+    public static List<Node> Dijkstra(Node start, Node end) {
+        start.setWeight(0);
+        PriorityQueue<Node> pq = new PriorityQueue<>();
+        pq.offer(start);
 
-    public String goTo(Node n){
-        Vector<Link> linksCopy = getAllLinks();
-        Vector<Node> nodiGiaPercorsi = new Vector<>();
-        Vector<Node> path = new Vector<>();
-        Node selectedNode;
-        Node position = n;
-        path.add(position);
-        String pathString = null;
+        while (!pq.isEmpty()) {
+            Node current = pq.poll();
+            current.setVisited(true);
 
-        setWeightNodes();
-        this.weightNode = 0;
-
-        //for first node
-        for (int i = 0; i < links.size() - 1; i++) {
-            //if the first Link is bigger than second I exchange than. order
-            if(links.get(i).getWeight() > links.get(i + 1).getWeight()){
-                links.remove(i);
-                links.add(links.get(i));
-                i--;
-            }
-        }
-
-        searchPath(n);
-
-        pathString = this.name + "  ";
-
-        while(position!=this){
-            selectedNode = lightestNode(position, nodiGiaPercorsi);
-            nodiGiaPercorsi.add(position);
-            path.add(position);
-            position = selectedNode;
-        }
-
-        //creo stringa return
-        for(int i = path.size() - 1; i > 0; i--){
-            pathString += path.get(i).name + "  ";
-
-        }
-        return pathString;
-    }
-
-    private void searchPath(Node n){//n = destination
-        if(this != n){//this = current node
-            Node nTmp;
-            Vector<Link> links = getAllLinks();
-            Link linkTmp;
-
-            //sort the vector links -> links is vector for the current node link with other node
-            // (ex. a link with b, a link with c ecc. vector links contains this link)
-            for(int i = 0; i < links.size() - 1; i++){
-                if(links.get(i).getWeight() > links.get(i + 1).getWeight()){
-                    linkTmp = links.get(i); //copy the biggest node
-                    links.remove(i); // remove biggest node
-                    links.add(linkTmp); // add biggest in last position
-
-                    // control current node and following node, current node is not links.get(i) but is links.get(i + 1)
-                    // because the current node (links.get(i)) when i have removed from vector the following node has taken its place
-                    i--;
-                }
+            if (current.equals(end)) {
+                break;
             }
 
-            for(Link l: links){
-                nTmp = l.getFollowingNode(this);// take the order link (ex. home -1-> a  and home -2-> b, it has taken a link "a"
-                                                // because "a" is first available node)
-                if(nTmp.weightNode == null || nTmp.weightNode > this.weightNode + l.getWeight()){
+            //Map it's similar to treeMap but the main difference is treeMap order the key and value in a tree
+            for (Map.Entry<Node, Integer> entry : current.getLinks().entrySet()){
+                Node neighbor = entry.getKey();//return node
 
-                    nTmp.weightNode = this.weightNode + l.getWeight();//update weight
-                    nTmp.searchPath(n);//it's a ricorsive method
+                if (!neighbor.isVisited()) {
+                    int distance = current.weightTo(neighbor);
 
+                    if (distance < neighbor.getWeight()) {
+                        neighbor.setWeight(distance);
+                        neighbor.setPrev(current);
+                        pq.offer(neighbor);
+                    }
                 }
             }
         }
-    }
 
-    public Vector<Link> getAllLinks(){
-        Vector<Link> tmpLink = new Vector<>();
-        for (Link l: links) {
-            tmpLink.add(l);
+        ArrayList<Node> path = new ArrayList<>();
+        for (Node node = end; node != null; node = node.getPrev()) {
+            path.add(node);
         }
-        return tmpLink;
+        Collections.reverse(path);
+        return path;
     }
-
-    public static Node lightestNode(Node position, Vector<Node> nodesSeen){
-
-        Node n = null;
-        Node tmpNode;
-
-        for(int i = 0; i < position.links.size(); i++){
-            tmpNode = position.links.get(i).getFollowingNode(position);
-
-            if((n == null || tmpNode.weightNode < n.weightNode) && !nodesSeen.contains(tmpNode)){
-                n = tmpNode;
-
-            }
-        }
-
-        return n;
-    }
-
 }
